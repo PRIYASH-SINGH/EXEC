@@ -1,152 +1,93 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Sparkles,
-  BookOpen,
-  Briefcase,
-  Layers,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-} from 'lucide-react';
-import { TaskItem, LearningPlan } from '../types';
-import { breakdownPlanWithAI } from '../services/api';
+import { Sparkles, X, ArrowRight, BookOpen, Briefcase, FileText, UploadCloud, Library } from 'lucide-react';
+import { Modal } from './ui/Modal';
+
+type PlanType = 'learning' | 'project';
 
 interface PlanIntakeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportPlan: (newPlan: LearningPlan, newTasks: TaskItem[]) => void;
+  onSubmit: (data: {
+    planTitle: string;
+    rawPlanText: string;
+    type: PlanType;
+    subjectOrSkill: string;
+    intervalMinutes: number;
+    sourceMode: 'raw' | 'pdf' | 'notebooklm';
+  }) => Promise<void>;
 }
 
 const TEMPLATES = [
   {
-    title: 'Machine Learning & Neural Nets Sprint',
-    subject: 'Machine Learning & PyTorch',
-    type: 'learning',
-    sample: `1. Understand Backprop and gradient descent mechanics (25 mins)\n2. Implement a 2-layer Neural Network from scratch in Python (40 mins)\n3. Convolutional Networks & Feature maps (30 mins)\n4. Hyperparameter tuning and Cross-Validation (20 mins)\n5. Mini project: MNIST digit classifier with 98% accuracy (45 mins)`,
+    title: 'Learn React Core',
+    subject: 'React & Hooks',
+    type: 'learning' as PlanType,
+    text: '1. Understand State and Props\n2. Hooks: useState, useEffect\n3. Context API basics\n4. Routing with React Router',
   },
   {
-    title: 'Full-Stack SaaS Build Sprint',
-    subject: 'React, Node.js & Database Architecture',
-    type: 'project',
-    sample: `1. Design Relational Schema & Migration scripts (35 mins)\n2. Setup Express REST endpoints with JWT authentication (45 mins)\n3. Build responsive React dashboard with optimistic UI updates (50 mins)\n4. Integrate Payment Webhooks and test idempotency (30 mins)\n5. Deploy container to Cloud Run with automated CI/CD (25 mins)`,
+    title: 'Build Python CLI',
+    subject: 'Python Scripting',
+    type: 'project' as PlanType,
+    text: '1. Argparse basics\n2. File handling and CSV parsing\n3. API requests with requests lib\n4. Publish to PyPI',
   },
   {
-    title: 'Data Structures & Algorithms Mastery',
-    subject: 'Trees, Graphs & Dynamic Programming',
-    type: 'learning',
-    sample: `1. Binary Search Trees & Tree Traversals (Inorder/Preorder/Postorder) (25 mins)\n2. Graph BFS vs DFS & Cycle Detection (30 mins)\n3. Dijkstra's Shortest Path Algorithm (35 mins)\n4. 1D Dynamic Programming: Fibonacci & Coin Change (30 mins)\n5. 2D DP: Longest Common Subsequence (40 mins)`,
-  },
+    title: 'DSA: Trees & Graphs',
+    subject: 'Algorithms',
+    type: 'learning' as PlanType,
+    text: '1. Tree traversals (Inorder, Preorder)\n2. BFS & DFS on Graphs\n3. Dijkstra shortest path\n4. Dynamic Programming on Trees',
+  }
 ];
 
-export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
-  isOpen,
-  onClose,
-  onImportPlan,
-}) => {
-  const [planTitle, setPlanTitle] = useState('');
-  const [subjectOrSkill, setSubjectOrSkill] = useState('');
-  const [planType, setPlanType] = useState<'learning' | 'project'>('learning');
-  const [rawPlanText, setRawPlanText] = useState('');
-  const [intervalMinutes, setIntervalMinutes] = useState(45);
+export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sourceMode, setSourceMode] = useState<'raw' | 'pdf' | 'notebooklm'>('raw');
+  
+  const [planTitle, setPlanTitle] = useState('');
+  const [rawPlanText, setRawPlanText] = useState('');
+  const [planType, setPlanType] = useState<PlanType>('learning');
+  const [subjectOrSkill, setSubjectOrSkill] = useState('');
+  const [intervalMinutes, setIntervalMinutes] = useState(45);
 
-  if (!isOpen) return null;
-
-  const handleApplyTemplate = (tmpl: (typeof TEMPLATES)[0]) => {
+  const handleApplyTemplate = (tmpl: typeof TEMPLATES[0]) => {
     setPlanTitle(tmpl.title);
     setSubjectOrSkill(tmpl.subject);
-    setPlanType(tmpl.type as 'learning' | 'project');
-    setRawPlanText(tmpl.sample);
+    setPlanType(tmpl.type);
+    setRawPlanText(tmpl.text);
+    setSourceMode('raw');
   };
 
   const handleDeconstruct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rawPlanText.trim()) return;
+    if (sourceMode !== 'raw') {
+        console.log("TODO: NotebookLM API integration for PDF/Notebook uploads.");
+        alert("File uploads are stubbed. Reverting to Raw Text for this prototype.");
+        setSourceMode('raw');
+        return;
+    }
 
+    if (!rawPlanText.trim()) return;
+    
     setIsProcessing(true);
     try {
-      const generatedTasks = await breakdownPlanWithAI(rawPlanText, planType);
-      const planId = `plan-${Date.now()}`;
-
-      const newPlan: LearningPlan = {
-        id: planId,
-        title: planTitle.trim() || 'Custom Execution Plan',
-        subjectOrSkill: subjectOrSkill.trim() || planTitle.trim() || 'Execution Sprint',
-        description: `Plan with ${generatedTasks.length} actionable execution milestones.`,
-        totalDays: 7,
-        currentDay: 1,
-        daily_time_available: 120,
-        activity_windows: ['09:00-11:00', '15:00-17:00'],
-        quiet_hours: ['22:00-07:00'],
-        dropsPerDay: 3,
-        intervalMinutes: Number(intervalMinutes) || 45,
-        isIntervalActive: planType === 'learning',
-        todayCompleted: false,
-        createdDate: new Date().toISOString().split('T')[0],
-        mastery_nodes: [],
-      };
-
-      const finalTasks: TaskItem[] = generatedTasks.map((t, idx) => ({
-        id: `task-${Date.now()}-${idx}`,
-        title: t.title || `Task #${idx + 1}`,
-        description: t.description || 'Action step',
-        priority: (t.priority as any) || (idx === 0 ? 'high' : 'medium'),
-        estimatedMinutes: t.estimatedMinutes || 25,
-        category: (t.category as any) || (planType === 'learning' ? 'learning' : 'project'),
-        type: t.type || 'screen-task',
-        heed: t.heed || { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: t.estimatedMinutes || 25 },
-        inTodayQueue: idx < 2, // Put the first 2 tasks immediately in today's queue!
-        todayOrder: idx + 1,
-        status: 'todo',
-        planId: planId,
-        progress: t.progress || { total: t.substeps?.length || 2, completed: 0, percentage: 0 },
-        contextual_content: t.contextual_content,
-        substeps: (t.substeps as any) || [
-          { id: `s-${idx}-1`, text: 'Setup environment and review prerequisites', done: false },
-          { id: `s-${idx}-2`, text: 'Execute core focus block', done: false },
-        ],
-      }));
-
-      onImportPlan(newPlan, finalTasks);
+      await onSubmit({
+        planTitle,
+        rawPlanText,
+        type: planType,
+        subjectOrSkill,
+        intervalMinutes,
+        sourceMode
+      });
       onClose();
-    } catch (err) {
-      console.error('Plan breakdown error:', err);
-    } finally {
+    } catch (error) {
+      console.error(error);
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-900/95 px-6 py-4 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Import Plan or Project</h2>
-              <p className="text-xs text-zinc-400">
-                Paste your AI-generated plan, custom notes, or project syllabus
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
+    <Modal open={isOpen} onClose={onClose} title="Import Plan or Project" subtitle="Provide source material to generate a custom learning plan">
         <form onSubmit={handleDeconstruct} className="p-6 space-y-5">
+            
           {/* Quick Preset Templates */}
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -162,7 +103,7 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-200 group-hover:text-amber-400">
                     {tmpl.type === 'learning' ? (
-                      <BookOpen className="h-3.5 w-3.5 text-sky-400" />
+                      <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
                     ) : (
                       <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
                     )}
@@ -175,6 +116,8 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
               ))}
             </div>
           </div>
+
+          <div className="h-px w-full bg-zinc-800" />
 
           {/* Plan Meta */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -191,7 +134,6 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
               />
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-300">
                 Core Subject / Skill
@@ -207,7 +149,6 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
             </div>
           </div>
 
-          {/* Type & Interval config */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-300">Category</label>
@@ -221,7 +162,7 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  Learning Skill / Subject
+                  Learning
                 </button>
                 <button
                   type="button"
@@ -232,11 +173,11 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  Build Project / Execution
+                  Project
                 </button>
               </div>
             </div>
-
+            
             {planType === 'learning' && (
               <div className="space-y-1">
                 <label className="text-xs font-medium text-zinc-300">
@@ -256,29 +197,83 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
             )}
           </div>
 
-          {/* Plan Textarea */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-zinc-300">
-                Plan Details, Syllabus, or AI Prompt Output
+          {/* Source Material UI (NotebookLM Scaffolding) */}
+          <div className="space-y-3">
+             <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Source Material
               </label>
-              <span className="text-[11px] text-zinc-500">
-                Paste raw tasks, outline, or AI plan
+              <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                Powered by NotebookLM
               </span>
             </div>
-            <textarea
-              rows={6}
-              value={rawPlanText}
-              onChange={(e) => setRawPlanText(e.target.value)}
-              placeholder={`Paste any messy AI-generated plan or syllabus here:
-e.g.
-Day 1: Theory of neural network activations
-Day 2: Implement loss functions and backpropagation
-Day 3: Write Convolutional layers
-...`}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none font-mono"
-            />
+            
+            <div className="flex rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+              <button
+                  type="button"
+                  onClick={() => setSourceMode('raw')}
+                  className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-bold transition-colors ${
+                    sourceMode === 'raw'
+                      ? 'bg-zinc-800 text-white shadow'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+              >
+                  <FileText className="w-3.5 h-3.5" />
+                  Raw Notes
+              </button>
+              <button
+                  type="button"
+                  onClick={() => setSourceMode('pdf')}
+                  className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-bold transition-colors ${
+                    sourceMode === 'pdf'
+                      ? 'bg-zinc-800 text-white shadow'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+              >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  Upload PDF
+              </button>
+              <button
+                  type="button"
+                  onClick={() => setSourceMode('notebooklm')}
+                  className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-bold transition-colors ${
+                    sourceMode === 'notebooklm'
+                      ? 'bg-zinc-800 text-white shadow'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+              >
+                  <Library className="w-3.5 h-3.5" />
+                  Notebook
+              </button>
+            </div>
+
+            {sourceMode === 'raw' && (
+                <textarea
+                rows={5}
+                value={rawPlanText}
+                onChange={(e) => setRawPlanText(e.target.value)}
+                placeholder={`Paste raw notes, syllabus, or learning goals here...`}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none font-mono"
+                />
+            )}
+
+            {sourceMode === 'pdf' && (
+                <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-700 rounded-xl bg-zinc-950 text-center">
+                   <UploadCloud className="w-8 h-8 text-zinc-500 mb-2" />
+                   <p className="text-sm font-medium text-zinc-300">Drag & drop PDF syllabus</p>
+                   <p className="text-xs text-zinc-500 mt-1">or click to browse</p>
+                   <button type="button" className="mt-4 bg-zinc-800 hover:bg-zinc-700 text-xs px-4 py-2 rounded-lg text-zinc-300 transition-colors">Select File</button>
+                </div>
+            )}
+
+            {sourceMode === 'notebooklm' && (
+                <div className="flex flex-col items-center justify-center p-8 border border-zinc-700 rounded-xl bg-zinc-950 text-center">
+                   <Library className="w-8 h-8 text-amber-500/50 mb-2" />
+                   <p className="text-sm font-medium text-zinc-300">Connect a NotebookLM Source</p>
+                   <p className="text-xs text-zinc-500 mt-1 max-w-sm">Import your curated notes and sources directly from Google NotebookLM to generate highly contextual tasks.</p>
+                   <button type="button" className="mt-4 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 font-medium text-xs px-4 py-2 rounded-lg transition-colors">Connect Notebook</button>
+                </div>
+            )}
           </div>
 
           {/* Submit */}
@@ -286,30 +281,29 @@ Day 3: Write Convolutional layers
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isProcessing || !rawPlanText.trim()}
-              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-black hover:bg-amber-400 transition-colors disabled:opacity-50 shadow-lg shadow-amber-500/20"
+              disabled={isProcessing || (sourceMode === 'raw' && !rawPlanText.trim())}
+              className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition-colors disabled:opacity-50 shadow-lg shadow-amber-500/20"
             >
               {isProcessing ? (
                 <>
                   <Sparkles className="h-4 w-4 animate-spin" />
-                  <span>Deconstructing with Gemini...</span>
+                  <span>Generating Tasks...</span>
                 </>
               ) : (
                 <>
-                  <span>Breakdown into Actionable Tasks</span>
+                  <span>Generate Plan Tasks</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 };

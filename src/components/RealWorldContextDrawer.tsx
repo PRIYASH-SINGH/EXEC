@@ -32,6 +32,7 @@ const PRESET_ACTIVITIES = [
   { label: 'Washing dishes / doing chores', icon: Utensils },
   { label: 'Commuting on bus or train', icon: Bus },
   { label: 'Taking a walk outside', icon: Footprints },
+  { label: 'Need an Audio Task (Walking/Driving)', icon: Headphones },
   { label: 'At my desk with dual screens', icon: Laptop },
   { label: 'Waiting in line / idle 5 mins', icon: Clock },
   { label: 'In bed / low energy before sleep', icon: Moon },

@@ -32,11 +32,11 @@ function getAI(): GoogleGenAI {
 }
 
 // Helper to handle temporary 503/429 errors from Gemini API
-async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetries = 6) {
+async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       // Fallback to a lighter model if the primary model is persistently overloaded
-      if (attempt > 3 && options.model === "gemini-3.8-flash") {
+      if (attempt > 1 && options.model === "gemini-3.8-flash") {
         options.model = "gemini-3.1-flash-lite";
         console.warn(`Switching to fallback model ${options.model} due to high demand on primary model.`);
       }
@@ -44,8 +44,8 @@ async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetrie
     } catch (err: any) {
       const msg = err.message || "";
       if ((msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("429") || err.status === 503 || err.status === 429) && attempt < maxRetries) {
-        // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-        const delay = Math.pow(2, attempt) * 1000;
+        // Shorter delays: 1s, 2s
+        const delay = attempt * 1000;
         console.warn(`Gemini API 503/429 error. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {

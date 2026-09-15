@@ -1,58 +1,38 @@
 import React, { useState } from 'react';
-import {
-  Plus,
-  ArrowRight,
-  Clock,
-  Layers,
-  Filter,
-  CheckCircle2,
-  ListTodo,
-  Sparkles,
-} from 'lucide-react';
-import { TaskItem, Priority, TaskCategory, TaskModality } from '../types';
+import { Plus, ListTodo, Sparkles, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { TaskItem, Priority, TaskCategory } from '../types';
 
 interface TaskVaultProps {
   tasks: TaskItem[];
   onTransferToToday: (taskId: string) => void;
-  onAddTask: (newTask: Partial<TaskItem>) => void;
   onOpenIntake: () => void;
+  onQuickAdd?: (title: string, priority: Priority, category: TaskCategory, mins: number) => void;
 }
 
 export const TaskVault: React.FC<TaskVaultProps> = ({
   tasks,
   onTransferToToday,
-  onAddTask,
   onOpenIntake,
+  onQuickAdd,
 }) => {
   const [filter, setFilter] = useState<'all' | 'high' | 'learning' | 'backlog'>('all');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPriority, setNewPriority] = useState<Priority>('medium');
-  const [newMinutes, setNewMinutes] = useState<number>(25);
-  const [newCategory, setNewCategory] = useState<TaskCategory>('learning');
+  const [newCategory, setNewCategory] = useState<TaskCategory>('project');
+  const [newMinutes, setNewMinutes] = useState(25);
 
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    onAddTask({
-      title: newTitle.trim(),
-      description: 'Custom added task',
-      priority: newPriority,
-      estimatedMinutes: Number(newMinutes) || 20,
-      category: newCategory,
-      type: newMinutes > 30 ? 'screen-task' : 'audio-task',
-      heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: Number(newMinutes) || 20 },
-      inTodayQueue: false,
-      status: 'todo',
-    });
-
-    setNewTitle('');
-    setIsQuickAddOpen(false);
+    if (newTitle.trim() && onQuickAdd) {
+      onQuickAdd(newTitle, newPriority, newCategory, newMinutes);
+      setNewTitle('');
+      setIsQuickAddOpen(false);
+    }
   };
 
-  // Filter tasks that are in backlog or all
   const filteredTasks = tasks.filter((t) => {
+    if (filter === 'all') return true;
     if (filter === 'backlog') return !t.inTodayQueue;
     if (filter === 'high') return t.priority === 'high';
     if (filter === 'learning') return t.category === 'learning';
@@ -69,14 +49,13 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
           </div>
           <div>
             <h3 className="text-base font-bold text-white tracking-tight">
-              Task Vault &amp; Plan Backlog
+              Task Vault & Plan Backlog
             </h3>
             <p className="text-xs text-zinc-400">
               All entered tasks • Transfer to "What to do today" based on priority
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
@@ -109,7 +88,6 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
             required
             className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
           />
-
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-zinc-400">
               <label>Priority:</label>
@@ -123,7 +101,6 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
                 <option value="low">Low</option>
               </select>
             </div>
-
             <div className="flex items-center gap-1.5 text-xs text-zinc-400">
               <label>Est. Minutes:</label>
               <input
@@ -135,7 +112,6 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
                 className="w-16 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
               />
             </div>
-
             <div className="flex items-center gap-1.5 text-xs text-zinc-400">
               <label>Category:</label>
               <select
@@ -150,10 +126,9 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
                 <option value="quick_win">Quick Win</option>
               </select>
             </div>
-
             <button
               type="submit"
-              className="ml-auto rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-black hover:bg-amber-400"
+              className="ml-auto rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition-colors"
             >
               Add to Vault
             </button>
@@ -162,7 +137,7 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs">
         <button
           onClick={() => setFilter('all')}
           className={`rounded-lg px-3 py-1 font-semibold transition-colors ${
@@ -197,7 +172,7 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
           onClick={() => setFilter('learning')}
           className={`rounded-lg px-3 py-1 font-semibold transition-colors ${
             filter === 'learning'
-              ? 'bg-sky-500/20 text-sky-300'
+              ? 'bg-cyan-500/20 text-cyan-300'
               : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
@@ -206,17 +181,17 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
       </div>
 
       {/* Tasks List */}
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 auto-rows-max">
         {filteredTasks.map((task) => (
           <div
             key={task.id}
-            className={`flex flex-col justify-between rounded-xl border p-3.5 transition-all ${
+            className={`group flex flex-col justify-between rounded-xl border p-4 transition-all duration-200 h-full ${
               task.inTodayQueue
                 ? 'border-amber-500/30 bg-amber-500/5'
-                : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
+                : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700 hover:bg-zinc-900 hover:shadow-xl hover:-translate-y-0.5'
             }`}
           >
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
@@ -224,40 +199,38 @@ export const TaskVault: React.FC<TaskVaultProps> = ({
                       ? 'bg-red-500/20 text-red-400'
                       : task.priority === 'medium'
                       ? 'bg-amber-500/20 text-amber-400'
-                      : 'bg-blue-500/20 text-blue-400'
+                      : 'bg-cyan-500/20 text-cyan-400'
                   }`}
                 >
                   {task.priority}
                 </span>
-
-                <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 bg-zinc-900/50 px-2 py-0.5 rounded border border-zinc-800">
                   <Clock className="h-3 w-3" />
                   <span>{task.estimatedMinutes}m</span>
                 </div>
               </div>
-
-              <h4 className="text-xs font-bold text-zinc-200 line-clamp-1">{task.title}</h4>
-              <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+              <h4 className="text-sm font-bold text-zinc-100 line-clamp-1">{task.title}</h4>
+              <p className="text-xs text-zinc-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
                 {task.description}
               </p>
             </div>
-
-            <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-2.5 text-xs">
-              <span className="text-[10px] text-zinc-500 capitalize">
-                {task.category} • {(task.type || 'unknown').replace('-', ' ')}
+            
+            <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs">
+              <span className="text-[10px] font-medium text-zinc-500 capitalize bg-zinc-900 px-2 py-1 rounded">
+                {task.category} • {(task.type || 'task').replace('-', ' ')}
               </span>
-
+              
               {task.inTodayQueue ? (
-                <span className="flex items-center gap-1 font-bold text-[11px] text-amber-400">
+                <span className="flex items-center gap-1 font-bold text-[11px] text-amber-500">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>In Today's Queue</span>
+                  <span>In Queue</span>
                 </span>
               ) : (
                 <button
                   onClick={() => onTransferToToday(task.id)}
-                  className="flex items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-amber-500 hover:text-black transition-colors"
+                  className="flex items-center gap-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-[11px] font-semibold text-zinc-200 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-colors"
                 >
-                  <span>Transfer to Today</span>
+                  <span>Transfer</span>
                   <ArrowRight className="h-3 w-3" />
                 </button>
               )}

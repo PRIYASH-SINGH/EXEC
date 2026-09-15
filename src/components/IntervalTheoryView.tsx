@@ -165,17 +165,23 @@ export const IntervalTheoryView: React.FC<IntervalTheoryViewProps> = ({
                       e.stopPropagation();
                       handleToggleSpeech(drop);
                     }}
-                    className={`rounded-lg p-1.5 transition-colors ${
+                    className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors ${
                       isSpeaking
-                        ? 'bg-sky-500 text-black'
-                        : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
                     }`}
-                    title={isSpeaking ? 'Stop narration' : 'Listen via Audio Narration'}
+                    title={isSpeaking ? 'Stop narration' : 'Listen to Audio'}
                   >
                     {isSpeaking ? (
-                      <VolumeX className="h-4 w-4" />
+                      <>
+                        <VolumeX className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Stop</span>
+                      </>
                     ) : (
-                      <Volume2 className="h-4 w-4" />
+                      <>
+                        <Volume2 className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="hidden sm:inline">Listen</span>
+                      </>
                     )}
                   </button>
                   {isExpanded ? (
@@ -209,23 +215,28 @@ export const IntervalTheoryView: React.FC<IntervalTheoryViewProps> = ({
                     <span className="text-[11px] text-zinc-500">
                       Delivered: {new Date(drop.deliveredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-
-                    {!drop.isRead ? (
-                      <button
-                        onClick={() => {
-                          onMarkAsRead(drop.id);
-                          playChime('drop');
-                        }}
-                        className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 transition-colors"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Mark as Read </span>
-                      </button>
-                    ) : (
-                      <span className="text-[11px] font-semibold text-emerald-400">
-                        ✓ Micro-Read Completed
+                    <div className="flex items-center gap-2">
+                      <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-500">
+                        <BookOpen className="h-3 w-3 text-amber-500/50" />
+                        Source: NotebookLM Doc {idx % 2 === 0 ? "A" : "B"}
                       </span>
-                    )}
+                      {!drop.isRead ? (
+                        <button
+                          onClick={() => {
+                            onMarkAsRead(drop.id);
+                            playChime('drop');
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-colors"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Mark as Read</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-emerald-400">
+                          ✓ Completed
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

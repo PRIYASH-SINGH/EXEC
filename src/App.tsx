@@ -28,7 +28,7 @@ import { RealWorldContextDrawer } from './components/RealWorldContextDrawer';
 import { PlanIntakeModal } from './components/PlanIntakeModal';
 import { DailyMCQModal } from './components/DailyMCQModal';
 import { ProcrastinationUnblockerModal } from './components/ProcrastinationUnblockerModal';
-import { generateTheoryDrop } from './services/api';
+import { generateTheoryDrop, breakdownPlanWithAI } from './services/api';
 import {
   requestNotificationPermission,
   sendBrowserNotification,
@@ -313,6 +313,57 @@ export default function App() {
     playChime('complete');
   };
 
+  const handlePlanSubmit = async (data: {
+    planTitle: string;
+    rawPlanText: string;
+    type: 'learning' | 'project';
+    subjectOrSkill: string;
+    intervalMinutes: number;
+    sourceMode: 'raw' | 'pdf' | 'notebooklm';
+  }) => {
+    const newTasksPartial = await breakdownPlanWithAI(data.rawPlanText, data.type);
+    
+    const newPlanId = `plan-${Date.now()}`;
+    const newPlan: LearningPlan = {
+      id: newPlanId,
+      title: data.planTitle || 'New Imported Plan',
+      subjectOrSkill: data.subjectOrSkill || 'General',
+      description: 'Generated from imported source material',
+      totalDays: 5,
+      currentDay: 1,
+      daily_time_available: 90,
+      activity_windows: ['08:00-10:00'],
+      quiet_hours: ['22:00-06:00'],
+      dropsPerDay: 3,
+      intervalMinutes: data.intervalMinutes || 25,
+      isIntervalActive: true,
+      todayCompleted: false,
+      createdDate: new Date().toISOString().split('T')[0],
+      mastery_nodes: [],
+    };
+    
+    const newTasks: TaskItem[] = newTasksPartial.map((t, idx) => ({
+      id: `task-${Date.now()}-${idx}`,
+      title: t.title || 'Untitled Task',
+      description: t.description || '',
+      priority: t.priority || 'medium',
+      estimatedMinutes: t.estimatedMinutes || 25,
+      category: t.category || 'learning',
+      type: t.type || 'screen-task',
+      heed: t.heed || { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 25 },
+      inTodayQueue: idx < 3,
+      todayOrder: idx < 3 ? idx + 1 : 99,
+      status: 'todo',
+      planId: newPlanId,
+      progress: t.substeps ? { total: t.substeps.length, completed: 0, percentage: 0 } : { total: 1, completed: 0, percentage: 0 },
+      substeps: t.substeps || [],
+      contextual_content: t.contextual_content,
+      requires_triage: false,
+    }));
+    
+    handleImportPlan(newPlan, newTasks);
+  };
+
   // Daily MCQ completion handler
   const handleMarkDayCompleted = (score: number) => {
     setIsTodayCompleted(true);
@@ -476,7 +527,7 @@ export default function App() {
       <PlanIntakeModal
         isOpen={isIntakeOpen}
         onClose={() => setIsIntakeOpen(false)}
-        onImportPlan={handleImportPlan}
+        onSubmit={handlePlanSubmit}
       />
 
       <DailyMCQModal
