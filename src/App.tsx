@@ -260,11 +260,24 @@ export default function App() {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId && t.substeps) {
+          const newSubsteps = t.substeps.map((s) =>
+            s.id === substepId ? { ...s, done: !s.done } : s
+          );
+          
+          let progress = t.progress;
+          if (progress) {
+            const completed = newSubsteps.filter(s => s.done).length;
+            progress = {
+              ...progress,
+              completed,
+              percentage: progress.total > 0 ? Math.round((completed / progress.total) * 100) : 0
+            };
+          }
+
           return {
             ...t,
-            substeps: t.substeps.map((s) =>
-              s.id === substepId ? { ...s, done: !s.done } : s
-            ),
+            substeps: newSubsteps,
+            progress
           };
         }
         return t;

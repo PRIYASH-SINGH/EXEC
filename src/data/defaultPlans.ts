@@ -2,198 +2,103 @@ import { TaskItem, LearningPlan, TheoryDrop } from '../types';
 
 export const INITIAL_LEARNING_PLANS: LearningPlan[] = [
   {
-    id: 'plan-ml-101',
-    title: 'Machine Learning & Neural Nets Sprint',
-    subjectOrSkill: 'Deep Learning & Neural Network Architectures',
-    description: 'A 7-day execution blueprint covering backprop, loss functions, CNNs, and model evaluation.',
-    totalDays: 7,
+    id: 'plan-java-dsa-core',
+    title: 'Java Core Repair + DSA Foundations',
+    subjectOrSkill: 'Java, DSA',
+    description: 'Structured daily execution plan to repair Java fundamentals and build core DSA array skills within a strict 75-minute daily budget.',
+    totalDays: 5,
     currentDay: 1,
-    daily_time_available: 120,
-    activity_windows: ['08:00-10:00', '18:00-20:00'],
+    daily_time_available: 75,
+    activity_windows: ['07:00-08:30', '17:30-19:00'],
     quiet_hours: ['22:00-06:00'],
     dropsPerDay: 3,
-    intervalMinutes: 45,
+    intervalMinutes: 25,
     isIntervalActive: true,
     todayCompleted: false,
     createdDate: '2026-09-15',
     mastery_nodes: [
-      { id: 'mn-1', concept: 'Neural Networks Core', status: 'learning' },
-      { id: 'mn-2', concept: 'Backpropagation', parent: 'mn-1', status: 'locked' },
-      { id: 'mn-3', concept: 'Loss Functions', parent: 'mn-1', status: 'locked' },
-    ],
-  },
-  {
-    id: 'plan-fullstack',
-    title: 'Full-Stack App Execution',
-    subjectOrSkill: 'System Design, RESTful APIs & React State',
-    description: 'Practical build sprint from database schema to containerized deployment.',
-    totalDays: 5,
-    currentDay: 1,
-    daily_time_available: 180,
-    activity_windows: ['09:00-12:00', '15:00-18:00'],
-    quiet_hours: ['23:00-07:00'],
-    dropsPerDay: 3,
-    intervalMinutes: 60,
-    isIntervalActive: false,
-    todayCompleted: false,
-    createdDate: '2026-09-14',
-    mastery_nodes: [
-      { id: 'mn-4', concept: 'System Design', status: 'learning' },
-      { id: 'mn-5', concept: 'RESTful APIs', parent: 'mn-4', status: 'locked' },
+      { id: 'node-java-core', concept: 'Java Core Mechanics', status: 'learning' },
+      { id: 'node-wrappers', concept: 'Wrapper Classes: parseInt vs valueOf', parent: 'node-java-core', status: 'locked' },
+      { id: 'node-strings', concept: 'String Methods & Immutability', parent: 'node-java-core', status: 'locked' },
+      { id: 'node-oop', concept: 'OOP Essentials', parent: 'node-java-core', status: 'locked' },
+      { id: 'node-comparators', concept: 'Comparable vs Comparator', parent: 'node-java-core', status: 'locked' },
+      { id: 'node-dsa-core', concept: 'DSA Foundations', status: 'locked' },
+      { id: 'node-arrays', concept: 'Arrays Basics', parent: 'node-dsa-core', status: 'locked' },
+      { id: 'node-prefix-sum', concept: 'Prefix / Suffix Sum', parent: 'node-dsa-core', status: 'locked' },
     ],
   },
 ];
 
 export const INITIAL_TASKS: TaskItem[] = [
   {
-    id: 't-1',
-    title: 'Derive Backpropagation & Gradient Descent Intuition',
-    description: 'Work through the chain rule mechanics for a 2-layer perceptron on paper.',
+    id: 'task-j-1',
+    title: 'Audio Review: parseInt vs valueOf Mechanics',
+    description: 'Listen to the breakdown of memory allocation differences between returning primitives vs objects in Java.',
     priority: 'high',
-    estimatedMinutes: 25,
-    category: 'learning',
-    type: 'paper-task',
-    heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 25 },
-    inTodayQueue: true,
-    todayOrder: 1,
-    status: 'in_progress',
-    planId: 'plan-ml-101',
-    substeps: [
-      { id: 's-1', text: 'Draw 2-layer forward pass computation graph', done: true },
-      { id: 's-2', text: 'Compute partial derivatives for weights W2', done: true },
-      { id: 's-3', text: 'Apply chain rule backward for hidden layer W1', done: false },
-    ],
-    requires_triage: false,
-  },
-  {
-    id: 't-2',
-    title: 'Listen to Podcast Breakdown: Transformer Attention Heads',
-    description: 'Review the intuition behind Query, Key, Value vectors during commute or chores.',
-    priority: 'medium',
     estimatedMinutes: 15,
     category: 'learning',
     type: 'audio-task',
     heed: { hands: 'Free', eyes: 'Free', ears: 'Busy', duration: 15 },
     inTodayQueue: true,
+    todayOrder: 1,
+    status: 'in_progress',
+    planId: 'plan-java-dsa-core',
+    progress: { total: 1, completed: 0, percentage: 0 },
+    substeps: [
+      { id: 's-j1', text: 'Start audio breakdown during a walk or chore', done: false },
+    ],
+    contextual_content: {
+      audio_script: "Today we are looking at Integer.parseInt versus Integer.valueOf. It's a classic interview trap. parseInt returns a primitive int. That means it doesn't create a new object on the heap, saving memory. valueOf, on the other hand, returns an Integer object. However, watch out for the Integer cache. Java caches Integer objects from -128 to 127. If you use valueOf in that range, it reuses the object, but outside that range, it creates a new one. Remember: parseInt for primitives, valueOf for objects."
+    },
+    requires_triage: false,
+  },
+  {
+    id: 'task-j-2',
+    title: 'Dry Run: String Methods & Immutability',
+    description: 'Write down memory references for String concat vs StringBuilder.append() on paper to visualize the String Pool.',
+    priority: 'high',
+    estimatedMinutes: 35,
+    category: 'deep_work',
+    type: 'paper-task',
+    heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 35 },
+    inTodayQueue: true,
     todayOrder: 2,
     status: 'todo',
-    planId: 'plan-ml-101',
+    planId: 'plan-java-dsa-core',
+    progress: { total: 2, completed: 0, percentage: 0 },
     substeps: [
-      { id: 's-4', text: 'Plug in headphones and start audio player', done: false },
-      { id: 's-5', text: 'Mentally visualize the Q-K dot product matrix', done: false },
+      { id: 's-j2', text: 'Draw HEAP vs String Pool memory blocks', done: false },
+      { id: 's-j3', text: 'Map out variable references for 3 distinct string operations', done: false },
     ],
     requires_triage: false,
   },
   {
-    id: 't-3',
-    title: 'Clean Dataset & Handle Missing Values in Pandas',
-    description: 'Preprocess raw sensor data, impute missing medians, normalize feature scales.',
-    priority: 'high',
-    estimatedMinutes: 30,
+    id: 'task-j-3',
+    title: 'Implementation: OOP Essentials Skeleton',
+    description: 'Draft a class hierarchy skeleton (Abstract class -> Concrete class) highlighting polymorphic method calls.',
+    priority: 'medium',
+    estimatedMinutes: 25,
     category: 'project',
     type: 'screen-task',
-    heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 30 },
+    heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 25 },
     inTodayQueue: true,
     todayOrder: 3,
     status: 'todo',
-    planId: 'plan-ml-101',
+    planId: 'plan-java-dsa-core',
+    progress: { total: 2, completed: 0, percentage: 0 },
     substeps: [
-      { id: 's-6', text: 'Inspect null counts across 12 feature columns', done: false },
-      { id: 's-7', text: 'Apply StandardScaler and check distributions', done: false },
+      { id: 's-j4', text: 'Define abstract Base entity with a final method', done: false },
+      { id: 's-j5', text: 'Extend with 2 concrete classes overriding a common behavior', done: false },
     ],
+    contextual_content: {
+      micro_flashcards: [
+        { q: "Can an abstract class have a constructor?", a: "Yes, it is called when a concrete subclass is instantiated." },
+        { q: "What is polymorphism?", a: "The ability of an object to take on many forms, typically via method overriding." }
+      ]
+    },
     requires_triage: false,
-  },
-  {
-    id: 't-4',
-    title: 'Mental Flashcard Review: Bias vs Variance Tradeoff',
-    description: 'Test recall of high variance symptoms (overfitting, big train-val gap) while taking a short walk.',
-    priority: 'low',
-    estimatedMinutes: 10,
-    category: 'quick_win',
-    type: 'audio-task',
-    heed: { hands: 'Free', eyes: 'Free', ears: 'Busy', duration: 10 },
-    inTodayQueue: false,
-    todayOrder: 4,
-    status: 'todo',
-    planId: 'plan-ml-101',
-    requires_triage: false,
-  },
-  {
-    id: 't-5',
-    title: 'Configure Docker Container & Test API Port Binding',
-    description: 'Write Dockerfile multi-stage build and verify local port forwarding on port 3000.',
-    priority: 'medium',
-    estimatedMinutes: 20,
-    category: 'project',
-    type: 'screen-task',
-    heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 20 },
-    inTodayQueue: false,
-    todayOrder: 5,
-    status: 'todo',
-    planId: 'plan-fullstack',
-    requires_triage: false,
-  },
-  {
-    id: 't-6',
-    title: 'Review System Design: Rate Limiting Algorithms',
-    description: 'Quick read on Token Bucket vs Leaky Bucket tradeoffs.',
-    priority: 'low',
-    estimatedMinutes: 12,
-    category: 'learning',
-    type: 'audio-task',
-    heed: { hands: 'Free', eyes: 'Free', ears: 'Busy', duration: 12 },
-    inTodayQueue: false,
-    todayOrder: 6,
-    status: 'todo',
-    planId: 'plan-fullstack',
-    requires_triage: true,
   },
 ];
 
-export const INITIAL_THEORY_DROPS: TheoryDrop[] = [
-  {
-    id: 'drop-1',
-    planId: 'plan-ml-101',
-    dayNumber: 1,
-    dropIndex: 1,
-    title: 'Activation Functions: Why Non-Linearity Matters',
-    readTimeMinutes: 3,
-    keyConcept: 'Without non-linear activations, stacking 100 neural layers collapses mathematically into a single linear regression.',
-    content: `### 1. The Core Paradox
-Imagine stacking 10 linear transformations: $y = W_3(W_2(W_1 x + b_1) + b_2) + b_3$. Mathematically, this collapses into a single matrix multiplication $y = W_{combined} x + b_{combined}$. No matter how deep your network is, it can only draw straight decision boundaries.
+export const INITIAL_THEORY_DROPS: TheoryDrop[] = [];
 
-### 2. The Solution: Non-Linear Gates
-Activation functions introduce curvature, allowing networks to approximate any arbitrary mathematical function (Universal Approximation Theorem):
-- **ReLU (Rectified Linear Unit)**: $f(x) = \max(0, x)$. Fast to compute, prevents gradient saturation for positive inputs, but can suffer from "dead neurons" if inputs stay negative.
-- **GELU / SiLU**: Smooth, probabilistic approximations favored in modern LLMs and Transformers (e.g. GPT-4, Gemini, LLaMA).
-- **Softmax**: Normalizes raw logits into a valid probability distribution where all outputs sum to 1.0.
-
-### 3. Actionable Takeaway
-When debugging vanishing gradients in deep networks, inspect if ReLU activations died out due to high learning rates pushing weights permanently into negative territory.`,
-    deliveredAt: '2026-09-15T08:30:00.000Z',
-    isRead: true,
-  },
-  {
-    id: 'drop-2',
-    planId: 'plan-ml-101',
-    dayNumber: 1,
-    dropIndex: 2,
-    title: 'Cross-Entropy Loss vs Mean Squared Error',
-    readTimeMinutes: 2,
-    keyConcept: 'Use Cross-Entropy for probabilities and classification; use MSE strictly for continuous regression targets.',
-    content: `### 1. Intuition in 60 Seconds
-Why shouldn't you use Mean Squared Error (MSE) for classification? Because when combined with sigmoid or softmax outputs, MSE produces a non-convex loss landscape with plateaus where gradients vanish to near zero—causing training to stall!
-
-### 2. The Cross-Entropy Advantage
-Cross-Entropy penalizes overconfident wrong predictions exponentially:
-$L = -\\sum y_i \\log(\\hat{y}_i)$
-- If the true label is 1 and your model predicts 0.99, loss is nearly 0.
-- If your model predicts 0.01 with 99% confidence in the wrong direction, loss blows up towards infinity! This provides a massive gradient push to steer the model back on track.
-
-### 3. Quick Rule of Thumb
-- Categorical prediction (e.g., Dog vs Cat, Topic Classification) $\\rightarrow$ **Cross-Entropy**.
-- Continuous scalar prediction (e.g., House Price, Temperature) $\\rightarrow$ **MSE or Huber Loss**.`,
-    deliveredAt: '2026-09-15T10:15:00.000Z',
-    isRead: false,
-  },
-];

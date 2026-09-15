@@ -32,14 +32,20 @@ function getAI(): GoogleGenAI {
 }
 
 // Helper to handle temporary 503/429 errors from Gemini API
-async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetries = 3) {
+async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetries = 6) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      // Fallback to a lighter model if the primary model is persistently overloaded
+      if (attempt > 3 && options.model === "gemini-3.8-flash") {
+        options.model = "gemini-3.1-flash-lite";
+        console.warn(`Switching to fallback model ${options.model} due to high demand on primary model.`);
+      }
       return await ai.models.generateContent(options);
     } catch (err: any) {
       const msg = err.message || "";
       if ((msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("429") || err.status === 503 || err.status === 429) && attempt < maxRetries) {
-        const delay = attempt * 1500;
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+        const delay = Math.pow(2, attempt) * 1000;
         console.warn(`Gemini API 503/429 error. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
@@ -67,9 +73,11 @@ Each object must have:
 - priority ("high", "medium", or "low")
 - estimatedMinutes (number, typically 5 to 60)
 - category ("learning", "project", "routine", "deep_work", or "quick_win")
-- cognitiveLoad ("deep_focus", "moderate", "light_listening", or "hands_free_verbal")
-- environmentReq ("desk_laptop", "anywhere_mobile", "hands_free_audio", or "physical")
-- substeps (array of strings, 2-4 mini steps)
+- type ("screen-task", "paper-task", "audio-task", or "physical-task")
+- heed (Object with hands: "Free"|"Busy", eyes: "Free"|"Busy", ears: "Free"|"Busy", duration: number)
+- substeps (array of objects with 'id', 'text', 'done' boolean)
+- progress (object with 'total', 'completed', 'percentage')
+- contextual_content (object with 'audio_script', 'micro_flashcards', or 'technical_breakdown' depending on the type of task, synthesizing any source material provided based on H.E.E.D. matrix)
 
 User Input:
 "${rawPlan}"
@@ -90,14 +98,52 @@ Plan context type: ${planType || "general"}`;
               priority: { type: Type.STRING },
               estimatedMinutes: { type: Type.NUMBER },
               category: { type: Type.STRING },
-              cognitiveLoad: { type: Type.STRING },
-              environmentReq: { type: Type.STRING },
+              type: { type: Type.STRING },
+              heed: {
+                type: Type.OBJECT,
+                properties: {
+                  hands: { type: Type.STRING },
+                  eyes: { type: Type.STRING },
+                  ears: { type: Type.STRING },
+                  duration: { type: Type.NUMBER }
+                }
+              },
               substeps: {
                 type: Type.ARRAY,
-                items: { type: Type.STRING },
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    text: { type: Type.STRING },
+                    done: { type: Type.BOOLEAN }
+                  }
+                }
               },
+              progress: {
+                type: Type.OBJECT,
+                properties: {
+                  total: { type: Type.NUMBER },
+                  completed: { type: Type.NUMBER },
+                  percentage: { type: Type.NUMBER }
+                }
+              },
+              contextual_content: {
+                type: Type.OBJECT,
+                properties: {
+                  audio_script: { type: Type.STRING },
+                  micro_flashcards: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { q: { type: Type.STRING }, a: { type: Type.STRING } } } },
+                  technical_breakdown: {
+                    type: Type.OBJECT,
+                    properties: {
+                      snippet: { type: Type.STRING },
+                      dry_run_instructions: { type: Type.STRING },
+                      code_architecture: { type: Type.STRING }
+                    }
+                  }
+                }
+              }
             },
-            required: ["title", "description", "priority", "estimatedMinutes", "category", "cognitiveLoad", "environmentReq"],
+            required: ["title", "description", "priority", "estimatedMinutes", "category", "type", "heed", "substeps", "progress"],
           },
         },
       },
@@ -129,8 +175,8 @@ ${JSON.stringify(
     id: t.id,
     title: t.title,
     category: t.category,
-    cognitiveLoad: t.cognitiveLoad,
-    environmentReq: t.environmentReq,
+    type: t.type,
+    heed: t.heed,
     estimatedMinutes: t.estimatedMinutes,
     priority: t.priority,
   })),

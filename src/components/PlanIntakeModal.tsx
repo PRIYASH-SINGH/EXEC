@@ -94,12 +94,14 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({
         priority: (t.priority as any) || (idx === 0 ? 'high' : 'medium'),
         estimatedMinutes: t.estimatedMinutes || 25,
         category: (t.category as any) || (planType === 'learning' ? 'learning' : 'project'),
-        type: 'screen-task',
-        heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: t.estimatedMinutes || 25 },
+        type: t.type || 'screen-task',
+        heed: t.heed || { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: t.estimatedMinutes || 25 },
         inTodayQueue: idx < 2, // Put the first 2 tasks immediately in today's queue!
         todayOrder: idx + 1,
         status: 'todo',
         planId: planId,
+        progress: t.progress || { total: t.substeps?.length || 2, completed: 0, percentage: 0 },
+        contextual_content: t.contextual_content,
         substeps: (t.substeps as any) || [
           { id: `s-${idx}-1`, text: 'Setup environment and review prerequisites', done: false },
           { id: `s-${idx}-2`, text: 'Execute core focus block', done: false },

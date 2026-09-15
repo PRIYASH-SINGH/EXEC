@@ -32,6 +32,17 @@ export interface TaskItem {
   planId?: string;
   substeps?: TaskSubstep[];
   requires_triage?: boolean;
+  progress?: {
+    total: number;
+    completed: number;
+    percentage: number;
+  };
+  contextual_content?: {
+    audio_script?: string;
+    micro_flashcards?: any;
+    technical_breakdown?: any;
+  };
+
 }
 
 export interface MasteryNode {

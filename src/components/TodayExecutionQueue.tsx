@@ -14,6 +14,9 @@ import {
   CheckSquare,
   Square,
   AlertCircle,
+  Volume2,
+  Code,
+  BookOpen,
   HelpCircle,
 } from 'lucide-react';
 import { TaskItem } from '../types';
@@ -323,6 +326,22 @@ export const TodayExecutionQueue: React.FC<TodayExecutionQueueProps> = ({
                         {task.description}
                       </p>
 
+                      {/* Progress Bar */}
+                      {task.progress && task.progress.total > 0 && (
+                        <div className="mt-2.5">
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
+                            <span>Progress</span>
+                            <span>{task.progress.completed} / {task.progress.total}</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                            <div 
+                              className="h-full bg-emerald-500 transition-all duration-300"
+                              style={{ width: `${task.progress.percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Substeps if available */}
                       {task.substeps && task.substeps.length > 0 && (
                         <div className="mt-2 space-y-1 pl-1">
@@ -342,6 +361,36 @@ export const TodayExecutionQueue: React.FC<TodayExecutionQueueProps> = ({
                               </span>
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Contextual Content */}
+                      {task.contextual_content && (
+                        <div className="mt-3 bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
+                          {task.contextual_content.audio_script && (
+                            <div className="space-y-1">
+                              <h5 className="text-[11px] font-bold text-amber-500 uppercase tracking-wide flex items-center gap-1"><Volume2 className="w-3 h-3"/> Audio Script</h5>
+                              <p className="text-xs text-zinc-300 leading-relaxed italic border-l-2 border-amber-500/30 pl-2">{task.contextual_content.audio_script}</p>
+                            </div>
+                          )}
+                          {task.contextual_content.micro_flashcards && Array.isArray(task.contextual_content.micro_flashcards) && (
+                            <div className="space-y-2">
+                              <h5 className="text-[11px] font-bold text-emerald-500 uppercase tracking-wide flex items-center gap-1"><BookOpen className="w-3 h-3"/> Micro Flashcards</h5>
+                              {task.contextual_content.micro_flashcards.map((fc: any, i: number) => (
+                                <div key={i} className="text-xs">
+                                  <span className="font-bold text-zinc-300">Q: {fc.q}</span>
+                                  <div className="text-zinc-500">A: {fc.a}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {task.contextual_content.technical_breakdown && (
+                            <div className="space-y-1">
+                              <h5 className="text-[11px] font-bold text-blue-500 uppercase tracking-wide flex items-center gap-1"><Code className="w-3 h-3"/> Technical Breakdown</h5>
+                              {task.contextual_content.technical_breakdown.code_architecture && <p className="text-xs text-zinc-400">{task.contextual_content.technical_breakdown.code_architecture}</p>}
+                              {task.contextual_content.technical_breakdown.snippet && <pre className="text-[10px] bg-zinc-950 p-2 rounded text-zinc-300 overflow-x-auto mt-1">{task.contextual_content.technical_breakdown.snippet}</pre>}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
