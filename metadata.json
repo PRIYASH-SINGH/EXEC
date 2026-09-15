@@ -1,0 +1,6 @@
+{
+  "name": "EXEC",
+  "description": "Plan execution engine that overcomes procrastination, transfers priorities to today, matches real-world contexts, and delivers interval theory reads with daily MCQ tests.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
