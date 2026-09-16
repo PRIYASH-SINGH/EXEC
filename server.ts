@@ -1,3 +1,4 @@
+import { apiRouter } from "./src/routes/api";
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
@@ -7,6 +8,7 @@ import { createServer as createViteServer } from "vite";
 dotenv.config();
 
 const app = express();
+app.use("/api", apiRouter);
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
