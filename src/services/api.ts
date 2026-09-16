@@ -4,7 +4,87 @@ import {
   TheoryDrop,
   MCQQuestion,
   ProcrastinationUnblockResponse,
+  LearningPlan,
 } from '../types';
+
+export async function createLearningPlan(
+  userId: string,
+  planTitle: string,
+  totalDays: number,
+  dailyTimeAvailableMinutes: number,
+  rawPlanDescription?: string,
+  notebooklmNotebookId?: string
+): Promise<{ planId: string; createdPlan: LearningPlan }> {
+  const response = await fetch('/api/plans/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      title: planTitle,
+      totalDays,
+      dailyTimeAvailableMinutes,
+      rawPlan: rawPlanDescription || '',
+      notebooklmNotebookId,
+    }),
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to create plan: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function getTodayTask(planId: string): Promise<{ task: TaskItem; theoryDrops: TheoryDrop[] }> {
+  const response = await fetch(`/api/tasks/today/${planId}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch today task');
+  }
+  return response.json();
+}
+
+export async function generateTheoryDrop(dailyTaskId: string, notebooklmNotebookId?: string): Promise<{ theoryDrop: TheoryDrop }> {
+  const response = await fetch('/api/theory/generate-daily-drop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dailyTaskId, notebooklmNotebookId }),
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to generate theory drop');
+  }
+  return response.json();
+}
+
+export async function generateDailyMcq(dailyTaskId: string, theoryDropId: string): Promise<{ mcqId: string; questions: MCQQuestion[] }> {
+  const response = await fetch('/api/mcq/generate-daily-quiz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dailyTaskId, theoryDropId }),
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to generate MCQ');
+  }
+  return response.json();
+}
+
+export async function submitDailyMcq(mcqId: string, answers: { questionId: string; selectedOptionId: string }[]): Promise<{ scorePercentage: number; passed: boolean; feedback: any }> {
+  const response = await fetch('/api/mcq/submit-answer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mcqId, answers }),
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to submit MCQ answers');
+  }
+  return response.json();
+}
 
 export async function breakdownPlanWithAI(rawPlan: string, planType: string): Promise<Partial<TaskItem>[]> {
   try {
@@ -74,37 +154,6 @@ export async function matchRealWorldContext(
       handsFreeAudioOption: `Listen to today's 3-minute theory drop or speak out answers to flashcards hands-free.`,
       mindsetBooster: 'Every minute of seamless pairing builds momentum that defeats procrastination.',
       alternativeTaskIds: tasks.filter(t => t.id !== best?.id).slice(0, 2).map(t => t.id),
-    };
-  }
-}
-
-export async function generateTheoryDrop(
-  planTitle: string,
-  subjectOrSkill: string,
-  currentDay: number,
-  dropIndex: number,
-  previousConcepts: string[]
-): Promise<Omit<TheoryDrop, 'id' | 'planId' | 'deliveredAt' | 'isRead'>> {
-  try {
-    const res = await fetch('/api/theory/generate-drop', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planTitle, subjectOrSkill, currentDay, dropIndex, previousConcepts }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.warn('Theory drop generation fallback:', error);
-    return {
-      title: `${subjectOrSkill}: Core Mental Model #${dropIndex}`,
-      readTimeMinutes: 3,
-      keyConcept: 'Deconstruct complex systems into atomic loops to master them 5x faster.',
-      content: `### 1. The Core Principle\nMastery doesn't come from passive 2-hour cramming sessions; it comes from distributed, high-signal 3-minute cognitive rehearsals spaced across the day.\n\n### 2. Practical Application\nApply the Feynman Technique right now: Explain the core mechanism of **${subjectOrSkill}** in plain English as if teaching a 12-year-old. If you hit a vague patch, that is your exact learning gap.\n\n### 3. Quick Action\nTake 30 seconds to jot down or articulate out loud the single biggest question you have about this topic.`,
-      dayNumber: currentDay,
-      dropIndex,
     };
   }
 }

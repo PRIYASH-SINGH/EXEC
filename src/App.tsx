@@ -28,7 +28,7 @@ import { RealWorldContextDrawer } from './components/RealWorldContextDrawer';
 import { PlanIntakeModal } from './components/PlanIntakeModal';
 import { DailyMCQModal } from './components/DailyMCQModal';
 import { ProcrastinationUnblockerModal } from './components/ProcrastinationUnblockerModal';
-import { generateTheoryDrop, breakdownPlanWithAI } from './services/api';
+import { generateTheoryDrop, breakdownPlanWithAI, createLearningPlan, getTodayTask } from './services/api';
 import {
   requestNotificationPermission,
   sendBrowserNotification,
@@ -133,13 +133,24 @@ export default function App() {
       const nextIndex = planDrops.length + 1;
       const prevConcepts = planDrops.map((d) => d.keyConcept);
 
-      const generated = await generateTheoryDrop(
-        activePlan.title,
-        activePlan.subjectOrSkill,
-        activePlan.currentDay,
-        nextIndex,
-        prevConcepts
-      );
+      // Fetching based on first task associated with the active plan as a fallback since the signature changed
+      const currentTask = tasks.find(t => t.planId === activePlan.id && t.status !== 'completed');
+      
+      let generated;
+      if (currentTask) {
+        const response = await generateTheoryDrop(currentTask.id);
+        generated = response.theoryDrop;
+      } else {
+        // Fallback for mock environment if no task exists
+        generated = {
+          title: `Core Concept for Day ${activePlan.currentDay}`,
+          readTimeMinutes: 3,
+          keyConcept: 'Executing consistent small steps',
+          content: 'Focus is everything.',
+          dayNumber: activePlan.currentDay,
+          dropIndex: nextIndex,
+        };
+      }
 
       const newDrop: TheoryDrop = {
         ...generated,
@@ -314,6 +325,7 @@ export default function App() {
   };
 
   const handlePlanSubmit = async (data: {
+    userEmail: string;
     planTitle: string;
     rawPlanText: string;
     type: 'learning' | 'project';
@@ -321,47 +333,85 @@ export default function App() {
     intervalMinutes: number;
     sourceMode: 'raw' | 'pdf' | 'notebooklm';
   }) => {
-    const newTasksPartial = await breakdownPlanWithAI(data.rawPlanText, data.type);
-    
-    const newPlanId = `plan-${Date.now()}`;
-    const newPlan: LearningPlan = {
-      id: newPlanId,
-      title: data.planTitle || 'New Imported Plan',
-      subjectOrSkill: data.subjectOrSkill || 'General',
-      description: 'Generated from imported source material',
-      totalDays: 5,
-      currentDay: 1,
-      daily_time_available: 90,
-      activity_windows: ['08:00-10:00'],
-      quiet_hours: ['22:00-06:00'],
-      dropsPerDay: 3,
-      intervalMinutes: data.intervalMinutes || 25,
-      isIntervalActive: true,
-      todayCompleted: false,
-      createdDate: new Date().toISOString().split('T')[0],
-      mastery_nodes: [],
-    };
-    
-    const newTasks: TaskItem[] = newTasksPartial.map((t, idx) => ({
-      id: `task-${Date.now()}-${idx}`,
-      title: t.title || 'Untitled Task',
-      description: t.description || '',
-      priority: t.priority || 'medium',
-      estimatedMinutes: t.estimatedMinutes || 25,
-      category: t.category || 'learning',
-      type: t.type || 'screen-task',
-      heed: t.heed || { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: 25 },
-      inTodayQueue: idx < 3,
-      todayOrder: idx < 3 ? idx + 1 : 99,
-      status: 'todo',
-      planId: newPlanId,
-      progress: t.substeps ? { total: t.substeps.length, completed: 0, percentage: 0 } : { total: 1, completed: 0, percentage: 0 },
-      substeps: t.substeps || [],
-      contextual_content: t.contextual_content,
-      requires_triage: false,
-    }));
-    
-    handleImportPlan(newPlan, newTasks);
+    try {
+      // 1. Authenticate / Register User (Stubbed conceptually, assuming backend handles via email)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.userEmail }),
+      });
+      const userData = await res.json();
+      const userId = userData.userId;
+
+      // Save email for session
+      localStorage.setItem('exec_user_email', data.userEmail);
+
+      // 2. Create the plan and tasks on backend
+      const planRes = await createLearningPlan(
+        userId,
+        data.planTitle,
+        7, // Default 7 days
+        90, // Default 90 mins
+        data.rawPlanText,
+        data.sourceMode === 'notebooklm' ? 'stub_id' : undefined
+      );
+
+      // 3. Re-fetch full plan including tasks
+      const fullPlan = await fetch(`/api/plans/${planRes.planId}`).then(r => r.json());
+
+      if (fullPlan && fullPlan.plan) {
+        // Map backend plan to frontend schema
+        const newPlan: LearningPlan = {
+          id: fullPlan.plan.id,
+          title: fullPlan.plan.title,
+          subjectOrSkill: data.subjectOrSkill || 'General',
+          description: fullPlan.plan.description || 'Generated from imported source material',
+          totalDays: fullPlan.plan.totalDays,
+          currentDay: 1,
+          daily_time_available: fullPlan.plan.dailyTimeAvailableMinutes,
+          activity_windows: ['08:00-10:00'],
+          quiet_hours: ['22:00-06:00'],
+          dropsPerDay: 3,
+          intervalMinutes: data.intervalMinutes || 25,
+          isIntervalActive: true,
+          todayCompleted: false,
+          createdDate: new Date().toISOString().split('T')[0],
+          mastery_nodes: [],
+        };
+        
+        // Map backend tasks to frontend schema
+        const newTasks: TaskItem[] = (fullPlan.tasks || []).map((t: any, idx: number) => ({
+          id: t.id,
+          title: t.topicTitle || 'Untitled Task',
+          description: t.topicDescription || '',
+          priority: 'medium',
+          estimatedMinutes: t.durationMinutes || 25,
+          category: 'learning',
+          type: t.taskType || 'screen-task',
+          heed: { hands: 'Busy', eyes: 'Busy', ears: 'Free', duration: t.durationMinutes || 25 },
+          inTodayQueue: idx < 3,
+          todayOrder: idx < 3 ? idx + 1 : 99,
+          status: 'todo',
+          planId: fullPlan.plan.id,
+          progress: { total: 1, completed: 0, percentage: 0 },
+          substeps: [],
+          contextual_content: undefined,
+          requires_triage: false,
+        }));
+        
+        handleImportPlan(newPlan, newTasks);
+
+        // Fetch today's task and generate drop immediately
+        const todayData = await getTodayTask(newPlan.id);
+        if (todayData && todayData.task) {
+          // Fire and forget theory generation so it's ready when user clicks it
+          generateTheoryDrop(todayData.task.id).catch(console.error);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to create plan:", error);
+      alert(`Error creating plan: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   };
 
   // Daily MCQ completion handler

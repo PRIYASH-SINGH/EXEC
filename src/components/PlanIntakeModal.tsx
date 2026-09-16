@@ -8,6 +8,7 @@ interface PlanIntakeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: {
+    userEmail: string;
     planTitle: string;
     rawPlanText: string;
     type: PlanType;
@@ -42,6 +43,7 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
   const [isProcessing, setIsProcessing] = useState(false);
   const [sourceMode, setSourceMode] = useState<'raw' | 'pdf' | 'notebooklm'>('raw');
   
+  const [userEmail, setUserEmail] = useState('');
   const [planTitle, setPlanTitle] = useState('');
   const [rawPlanText, setRawPlanText] = useState('');
   const [planType, setPlanType] = useState<PlanType>('learning');
@@ -65,11 +67,16 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
         return;
     }
 
+    if (!userEmail.trim()) {
+      alert("Please enter your email");
+      return;
+    }
     if (!rawPlanText.trim()) return;
     
     setIsProcessing(true);
     try {
       await onSubmit({
+        userEmail,
         planTitle,
         rawPlanText,
         type: planType,
@@ -115,6 +122,23 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="h-px w-full bg-zinc-800" />
+
+          {/* User Meta */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-300">
+              User Email
+            </label>
+            <input
+              type="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              placeholder="e.g. hello@example.com"
+              required
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+            />
           </div>
 
           <div className="h-px w-full bg-zinc-800" />
