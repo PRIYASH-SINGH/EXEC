@@ -15,6 +15,29 @@ const getAI = () => {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
+// Retry helper — handles 503/429 spikes with exponential backoff + model fallback
+async function generateWithRetry(ai: GoogleGenAI, options: any, maxRetries = 6): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 3 && options.model === 'gemini-3.8-flash') {
+        options.model = 'gemini-3.6-flash';
+        console.warn(`[retry] Falling back to ${options.model}`);
+      }
+      return await ai.models.generateContent(options);
+    } catch (err: any) {
+      const msg = err.message || '';
+      const isRetryable = msg.includes('503') || msg.includes('429') || msg.includes('UNAVAILABLE') || err.status === 503 || err.status === 429;
+      if (isRetryable && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 500;
+        console.warn(`[retry] Gemini ${err.status || '5xx'} — waiting ${delay}ms (attempt ${attempt}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 // 1. POST /api/auth/register
 const registerSchema = z.object({
   email: z.string().email(),
@@ -71,7 +94,7 @@ apiRouter.post('/plans/create', async (req, res) => {
     Respond in JSON:
     { "days": [{ "dayNumber": 1, "topicTitle": "...", "conceptKeyword": "..." }] }`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
@@ -196,7 +219,7 @@ Generate EXACTLY this JSON structure (no preamble):
   "codeExampleSnippet": "public class Example { ... }"
 }`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
@@ -268,7 +291,7 @@ Return this JSON structure (no preamble):
   ]
 }`;
 
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
