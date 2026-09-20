@@ -60,12 +60,6 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
 
   const handleDeconstruct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sourceMode !== 'raw') {
-        console.log("TODO: NotebookLM API integration for PDF/Notebook uploads.");
-        alert("File uploads are stubbed. Reverting to Raw Text for this prototype.");
-        setSourceMode('raw');
-        return;
-    }
 
     if (!userEmail.trim()) {
       alert("Please enter your email");
@@ -245,18 +239,16 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
                   <FileText className="w-3.5 h-3.5" />
                   Raw Notes
               </button>
-              <button
-                  type="button"
-                  onClick={() => setSourceMode('pdf')}
-                  className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-bold transition-colors ${
-                    sourceMode === 'pdf'
-                      ? 'bg-zinc-800 text-white shadow'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
+              <div
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold cursor-not-allowed opacity-40 text-zinc-500 select-none"
+                  title="PDF upload — coming soon"
               >
                   <UploadCloud className="w-3.5 h-3.5" />
                   Upload PDF
-              </button>
+                  <span className="ml-1 text-[9px] font-semibold uppercase tracking-wide bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded-full border border-zinc-700">
+                    Soon
+                  </span>
+              </div>
               <button
                   type="button"
                   onClick={() => setSourceMode('notebooklm')}
@@ -279,15 +271,6 @@ export const PlanIntakeModal: React.FC<PlanIntakeModalProps> = ({ isOpen, onClos
                 placeholder={`Paste raw notes, syllabus, or learning goals here...`}
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none font-mono"
                 />
-            )}
-
-            {sourceMode === 'pdf' && (
-                <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-700 rounded-xl bg-zinc-950 text-center">
-                   <UploadCloud className="w-8 h-8 text-zinc-500 mb-2" />
-                   <p className="text-sm font-medium text-zinc-300">Drag & drop PDF syllabus</p>
-                   <p className="text-xs text-zinc-500 mt-1">or click to browse</p>
-                   <button type="button" className="mt-4 bg-zinc-800 hover:bg-zinc-700 text-xs px-4 py-2 rounded-lg text-zinc-300 transition-colors">Select File</button>
-                </div>
             )}
 
             {sourceMode === 'notebooklm' && (

@@ -234,11 +234,22 @@ export const RealWorldContextDrawer: React.FC<RealWorldContextDrawerProps> = ({
                         <span>Hands-Free Audio Option</span>
                       </div>
                       <button
-                        onClick={() =>
-                          toggleSpeech(
-                            `${recommendedTask.title}. ${matchResult.executionStrategy}. ${matchResult.handsFreeAudioOption}`
-                          )
-                        }
+                        onClick={() => {
+                          // Prefer the AI-generated audio_script; fall back to description.
+                          // Strip markdown symbols so TTS doesn't read "#", "*", "```", etc.
+                          const rawNarration =
+                            recommendedTask.contextual_content?.audio_script ||
+                            recommendedTask.description ||
+                            `${recommendedTask.title}. ${matchResult.executionStrategy}`;
+                          const cleanNarration = rawNarration
+                            .replace(/```[\s\S]*?```/g, '') // remove code fences
+                            .replace(/`[^`]*`/g, '')        // remove inline code
+                            .replace(/#{1,6}\s/g, '')        // remove heading markers
+                            .replace(/[*_~>-]+/g, '')        // remove *, _, ~, >, -
+                            .replace(/\s{2,}/g, ' ')         // collapse whitespace
+                            .trim();
+                          toggleSpeech(cleanNarration);
+                        }}
                         className="flex items-center gap-1 rounded-lg bg-sky-500/20 px-2 py-1 text-xs font-semibold text-sky-300 hover:bg-sky-500/30 transition-colors"
                       >
                         {isSpeaking ? (
