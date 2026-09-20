@@ -2,60 +2,18 @@ import { apiRouter } from "./src/routes/api";
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { getAI, generateContentWithRetry, PRIMARY_MODEL } from "./src/lib/gemini";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+// Body parser must be mounted before API routes
 app.use(express.json({ limit: "10mb" }));
 app.use("/api", apiRouter);
-
-// Lazy GoogleGenAI client
-let aiClient: GoogleGenAI | null = null;
-function getAI(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is missing.");
-    }
-    aiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-  }
-  return aiClient;
-}
-
-// Helper to handle temporary 503/429 errors from Gemini API
-async function generateContentWithRetry(ai: GoogleGenAI, options: any, maxRetries = 3) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      // Fallback to a lighter model if the primary model is persistently overloaded
-      if (attempt > 1 && options.model === "gemini-3.8-flash") {
-        options.model = "gemini-3.1-flash-lite";
-        console.warn(`Switching to fallback model ${options.model} due to high demand on primary model.`);
-      }
-      return await ai.models.generateContent(options);
-    } catch (err: any) {
-      const msg = err.message || "";
-      if ((msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("429") || err.status === 503 || err.status === 429) && attempt < maxRetries) {
-        // Shorter delays: 1s, 2s
-        const delay = attempt * 1000;
-        console.warn(`Gemini API 503/429 error. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        throw err;
-      }
-    }
-  }
-}
 
 // 1. Plan Breakdown API
 app.post("/api/plan/breakdown", async (req, res) => {
@@ -86,7 +44,7 @@ User Input:
 Plan context type: ${planType || "general"}`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: PRIMARY_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -202,7 +160,7 @@ Respond in strict JSON with:
 - alternativeTaskIds: Array of 1-2 secondary compatible task IDs`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: PRIMARY_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -259,7 +217,7 @@ Respond in strict JSON with:
 - mentalCheckQuestion: string (a thought-provoking question to ponder)`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: PRIMARY_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -310,7 +268,7 @@ Respond in strict JSON with an array of objects:
 - conceptTested: short string name of the concept tested`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: PRIMARY_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -363,7 +321,7 @@ Provide an anti-friction momentum kickstarter based on behavioral psychology:
 Respond in strict JSON with those 4 fields.`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: PRIMARY_MODEL,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
